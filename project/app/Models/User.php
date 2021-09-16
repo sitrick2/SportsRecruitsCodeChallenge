@@ -17,9 +17,10 @@ use Illuminate\Support\Str;
  * @property int|null $can_play_goalie
  * @property-read string $fullname
  * @property-read bool $is_goalie
+ * @method static Builder|User coaches()
+ * @method static Builder|User players()
  * @method static Builder|User newModelQuery()
  * @method static Builder|User newQuery()
- * @method static Builder|User ofPlayers()
  * @method static Builder|User query()
  * @method static Builder|User whereCanPlayGoalie($value)
  * @method static Builder|User whereFirstName($value)
@@ -50,9 +51,14 @@ class User extends Model
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeOfPlayers(Builder $query): Builder
+    public function scopePlayers(Builder $query): Builder
     {
         return $query->where('user_type', static::USER_TYPE_PLAYER);
+    }
+
+    public function scopeCoaches(Builder $query): Builder
+    {
+        return $query->where('user_type', static::USER_TYPE_COACH);
     }
 
     public function canPlayGoalie(): bool
