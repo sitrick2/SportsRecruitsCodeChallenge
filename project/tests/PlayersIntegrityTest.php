@@ -7,17 +7,9 @@ use App\Models\User;
 
 class PlayersIntegrityTest extends TestCase
 {
-    /**
-     * A basic test example.
-     *
-     * @return void
-     */
     public function testGoaliePlayersExist (): void
     {
-/*
-		Check there are players that have can_play_goalie set as 1
-*/
-		$result = User::ofPlayers()->where('can_play_goalie', 1)->count();
+		$result = User::players()->where('can_play_goalie', 1)->count();
 		$this->assertTrue($result > 1);
 
     }

@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -32,6 +34,8 @@ use Illuminate\Support\Str;
  */
 class User extends Model
 {
+    use HasFactory;
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -46,28 +50,42 @@ class User extends Model
     public const USER_TYPE_COACH = 'coach';
 
     /**
-     * Players only local scope
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * Model Scopes
      */
-    public function scopePlayers(Builder $query): Builder
-    {
-        return $query->where('user_type', static::USER_TYPE_PLAYER);
-    }
-
     public function scopeCoaches(Builder $query): Builder
     {
         return $query->where('user_type', static::USER_TYPE_COACH);
     }
 
+    public function scopeGoalies(Builder $query): Builder
+    {
+        return $this->scopePlayers($query)
+            ->where('can_play_goalie', true);
+    }
+
+    public function scopePlayers(Builder $query): Builder
+    {
+        return $query->where('user_type', static::USER_TYPE_PLAYER);
+    }
+
+    /**
+     * Relationship definitions
+     */
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class);
+    }
+
+    /**
+     * Getters/Setters/Convenience Methods
+     */
+    public function getFullName(): string
+    {
+        return Str::title($this->first_name . ' ' . $this->last_name);
+    }
+
     public function canPlayGoalie(): bool
     {
         return (bool) $this->can_play_goalie;
-    }
-
-    public function getFullname(): string
-    {
-        return Str::title($this->first_name . ' ' . $this->last_name);
     }
 }

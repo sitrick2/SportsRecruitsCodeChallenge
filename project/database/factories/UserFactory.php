@@ -4,44 +4,74 @@ namespace Database\Factories;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 class UserFactory extends Factory
 {
-    /**
-     * The name of the factory's corresponding model.
-     *
-     * @var string
-     */
+
     protected $model = User::class;
 
     /**
-     * Define the model's default state.
-     *
-     * @return array
+     * @throws \Exception
      */
-    public function definition()
+    public function definition(): array
     {
+        $userType = random_int(1, 20) === 1 ? User::USER_TYPE_COACH : User::USER_TYPE_PLAYER;
+
         return [
-            'name' => $this->faker->name(),
-            'email' => $this->faker->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
-            'remember_token' => Str::random(10),
+            'user_type' =>  $userType,
+            'first_name' => $this->faker->firstName(),
+            'last_name' => $this->faker->lastName(),
+            'ranking' => $this->rankByExpectedDistribution($userType === User::USER_TYPE_PLAYER)
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     *
-     * @return \Illuminate\Database\Eloquent\Factories\Factory
-     */
-    public function unverified()
+    public function player(): UserFactory
     {
         return $this->state(function (array $attributes) {
             return [
-                'email_verified_at' => null,
+                'user_type' => User::USER_TYPE_PLAYER,
+                'ranking' => $this->rankByExpectedDistribution()
             ];
         });
+    }
+
+    public function coach(): UserFactory
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'user_type' => User::USER_TYPE_COACH,
+                'ranking' => $this->rankByExpectedDistribution(false)
+            ];
+        });
+    }
+
+    /**
+     * @throws \Exception
+     */
+    private function rankByExpectedDistribution(bool $isPlayer = true): int
+    {
+        if (!$isPlayer) { // if coach, 1 in 5 are ranked 1, rest ranked 0
+            return random_int(1, 5) === 1 ? 1 : 0;
+        }
+
+        $randomIntForProbability = random_int(1, 100);
+
+        if ($randomIntForProbability <= 78) { //distribution according to seeded data is 78% of players are rank 3
+            return 3;
+        }
+
+        if ($randomIntForProbability >= 79 && $randomIntForProbability <= 85) { // 7% rank 3
+            return 4;
+        }
+
+        if ($randomIntForProbability >= 86 && $randomIntForProbability <= 91) {// 6% rank 5
+            return 5;
+        }
+
+        if ($randomIntForProbability >= 92 && $randomIntForProbability <= 96) {// 5% rank 5
+            return 2;
+        }
+
+        return 1; //4% rank 1
     }
 }

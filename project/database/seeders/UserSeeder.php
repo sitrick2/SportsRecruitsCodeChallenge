@@ -29,6 +29,10 @@ class UserSeeder extends Seeder
         }
 
         User::reguard();
+
+        if (!app()->environment('testing')) {
+            User::factory()->count(99910)->create();
+        }
     }
 
     private function getPlayerArray(): array
