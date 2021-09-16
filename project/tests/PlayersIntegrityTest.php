@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use App\User;
+use App\Models\User;
 
 class PlayersIntegrityTest extends TestCase
 {
@@ -17,7 +17,7 @@ class PlayersIntegrityTest extends TestCase
 /*
 		Check there are players that have can_play_goalie set as 1
 */
-		$result = User::where('user_type', 'player')->where('can_play_goalie', 1)->count();
+		$result = User::ofPlayers()->where('can_play_goalie', 1)->count();
 		$this->assertTrue($result > 1);
 
     }
