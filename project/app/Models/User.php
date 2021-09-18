@@ -31,6 +31,12 @@ use Illuminate\Support\Str;
  * @method static Builder|User whereRanking($value)
  * @method static Builder|User whereUserType($value)
  * @mixin \Eloquent
+ * @property int|null $team_id
+ * @property-read \App\Models\Team|null $team
+ * @method static \Database\Factories\UserFactory factory(...$parameters)
+ * @method static Builder|User goalies()
+ * @method static Builder|User whereTeamId($value)
+ * @method static Builder|User unassigned()
  */
 class User extends Model
 {
@@ -68,6 +74,11 @@ class User extends Model
         return $query->where('user_type', static::USER_TYPE_PLAYER);
     }
 
+    public function scopeUnassigned(Builder $query): Builder
+    {
+        return $query->whereNull('team_id');
+    }
+
     /**
      * Relationship definitions
      */
@@ -87,5 +98,15 @@ class User extends Model
     public function canPlayGoalie(): bool
     {
         return (bool) $this->can_play_goalie;
+    }
+
+    public function isCoach(): bool
+    {
+        return $this->user_type === static::USER_TYPE_COACH;
+    }
+
+    public function isPlayer(): bool
+    {
+        return $this->user_type === static::USER_TYPE_PLAYER;
     }
 }

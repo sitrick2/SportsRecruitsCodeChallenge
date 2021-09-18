@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\Team;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 class TeamFactory extends Factory
 {
@@ -23,7 +22,7 @@ class TeamFactory extends Factory
     public function definition(): array
     {
         return [
-            'team_name' => Str::title($this->faker->city() . " " . $this->faker->word())
+            'team_name' => Team::generateTeamName()
         ];
     }
 }

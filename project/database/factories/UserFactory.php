@@ -16,12 +16,11 @@ class UserFactory extends Factory
     public function definition(): array
     {
         $userType = random_int(1, 20) === 1 ? User::USER_TYPE_COACH : User::USER_TYPE_PLAYER;
-
         return [
-            'user_type' =>  $userType,
-            'first_name' => $this->faker->firstName(),
-            'last_name' => $this->faker->lastName(),
-            'ranking' => $this->rankByExpectedDistribution($userType === User::USER_TYPE_PLAYER)
+            'user_type'         =>  $userType,
+            'first_name'        => $this->faker->firstName(),
+            'last_name'         => $this->faker->lastName(),
+            'ranking'           => $this->rankByExpectedDistribution($userType === User::USER_TYPE_PLAYER)
         ];
     }
 
@@ -29,8 +28,8 @@ class UserFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             return [
-                'user_type' => User::USER_TYPE_PLAYER,
-                'ranking' => $this->rankByExpectedDistribution()
+                'user_type'     => User::USER_TYPE_PLAYER,
+                'ranking'       => $this->rankByExpectedDistribution()
             ];
         });
     }
@@ -39,8 +38,19 @@ class UserFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             return [
-                'user_type' => User::USER_TYPE_COACH,
-                'ranking' => $this->rankByExpectedDistribution(false)
+                'user_type'     => User::USER_TYPE_COACH,
+                'ranking'       => $this->rankByExpectedDistribution(false)
+            ];
+        });
+    }
+
+    public function goalie(): UserFactory
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'user_type'             => User::USER_TYPE_PLAYER,
+                'ranking'               => $this->rankByExpectedDistribution(true),
+                'can_play_goalie'       => true
             ];
         });
     }
