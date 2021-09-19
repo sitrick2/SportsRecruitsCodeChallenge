@@ -12,4 +12,5 @@ interface TeamRepositoryInterface
     public function createMultiple(int $numToCreate, ?array $teamNames = null, ?Collection $coaches = null): Collection;
     public function update(Team $team, ?string $newName = null, ?Collection $players = null): Team;
     public function delete(Team $team): Team;
+    public function haveTeamsBeenGenerated(): bool;
 }

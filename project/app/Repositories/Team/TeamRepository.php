@@ -83,6 +83,11 @@ class TeamRepository implements TeamRepositoryInterface
         return $team;
     }
 
+    public function haveTeamsBeenGenerated(): bool
+    {
+        return Team::count() > 0;
+    }
+
     private function filterAccidentalNonPlayers(Collection $players): Collection
     {
         return $players->filter(function (User $user) {

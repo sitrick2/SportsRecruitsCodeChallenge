@@ -24,19 +24,20 @@ class TeamGenerationService implements TeamGenerationServiceInterface
 
     public function generateTeams(?int $avgTeamSize = null, ?array $teamNames = null): Collection
     {
+        $avgTeamSize = $avgTeamSize ?? (int) config('teams.default_avg_team_size');
+
         $numberOfTeams = $this->determineNumberOfTeams($avgTeamSize);
         $teams = $this->teamRepository->createMultiple($numberOfTeams, $teamNames);
         $teams = $this->assignCoachesToTeams($teams);
         $teams = $this->assignGoaliesToTeams($teams);
-        $this->distributePlayersAcrossTeams($teams);
+        $teams = $this->distributePlayersAcrossTeams($teams, $avgTeamSize);
 
-        return $teams;
+        return $this->teamBalancerService->balanceTeams($teams);
     }
 
-    private function determineNumberOfTeams(?int $avgTeamSize): int
+    private function determineNumberOfTeams(int $avgTeamSize): int
     {
         $playerCount = $this->userRepository->getTotalPlayerCount();
-        $avgTeamSize = $avgTeamSize ?? (int) config('teams.default_avg_team_size');
         return $playerCount / $avgTeamSize;
     }
 
@@ -62,16 +63,16 @@ class TeamGenerationService implements TeamGenerationServiceInterface
         return $teams;
     }
 
-    private function distributePlayersAcrossTeams(Collection $teams): void
+    private function distributePlayersAcrossTeams(Collection $teams, int $avgTeamSize): Collection
     {
         $players = $this->userRepository->getUnassignedPlayers();
 
-        while ($teams->count() > 0) {
-            $this->teamBalancerService->balanceTeamPair(
-                $teams->pop(),
-                $teams->pop(),
-                $players->random((config('teams.default_avg_team_size') - 1) * 2) //2 teams worth of players -1 for each already assigned team goalie
-            );
+        //first assignment pass, random distribution
+        foreach ($teams as $team) {
+            /* @var Team $team */
+            $team->players()->saveMany($players->random($avgTeamSize - 1)); // -1 to account for goalie already assigned
         }
+
+        return $teams;
     }
 }
