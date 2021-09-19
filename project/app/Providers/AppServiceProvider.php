@@ -6,6 +6,8 @@ use App\Repositories\Team\TeamRepository;
 use App\Repositories\Team\TeamRepositoryInterface;
 use App\Repositories\User\UserRepository;
 use App\Repositories\User\UserRepositoryInterface;
+use App\Services\TeamBalancer\TeamBalancerService;
+use App\Services\TeamBalancer\TeamBalancerServiceInterface;
 use App\Services\TeamGeneration\TeamGenerationService;
 use App\Services\TeamGeneration\TeamGenerationServiceInterface;
 use Faker\Generator;
@@ -33,6 +35,10 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(TeamGenerationServiceInterface::class, function () {
             return app(TeamGenerationService::class);
+        });
+
+        $this->app->singleton(TeamBalancerServiceInterface::class, function () {
+            return app(TeamBalancerService::class);
         });
     }
 

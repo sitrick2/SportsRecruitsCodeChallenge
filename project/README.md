@@ -13,3 +13,4 @@ should a different implementation of the class be desired further down the road.
 
 ## Changes For Further Iterations
 - Currently for the sake of time, the application generally handles invalid data errors gracefully with warning logs, discarding failures and continuing on. Further iterations would make use of robust Exception throwing and handling to restore corrupted input or otherwise escalate the failure state.
+- In the interest of time, simplicity, and sticking to my interpretation of the instructions, most of this process is handled synchronously through a single route and controller method. Given the opportunity to refine and optimize, I would likely break this logic down into a collection of REST API endpoints, process the balancing logic asynchronously using job queues to speed up processing, and retrieve the final team data on the frontend with ajax requests.
