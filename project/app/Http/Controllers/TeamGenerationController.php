@@ -22,10 +22,10 @@ class TeamGenerationController extends Controller
     public function create(Request $request)
     {
         if ($this->teamRepository->haveTeamsBeenGenerated()) {
-            return TeamResource::collection(Team::with(['coach', 'players'])->get());
+            return view('create', ['teams' => TeamResource::collection(Team::with(['coach', 'players'])->get())]);
         }
 
         $teams = $this->teamGenerationService->generateTeams($request->get('avgTeamSize'), $request->get('teamNames'));
-        return TeamResource::collection($teams);
+        return view('create', ['teams' => TeamResource::collection($teams)]);
     }
 }

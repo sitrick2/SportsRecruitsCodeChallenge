@@ -9,6 +9,9 @@ The application also persists its database data in the directory `~/.srapp`, whi
 ## Use
 Simply navigate to `http://localhost:8001/teams/create` in a web browser.
 
+## Assumptions
+- Assumptions are minimal and mostly noted in code comments. One significant assumption, however, is the assumption that once generated, teams should persist in the database and be returned consistently once generated. To re-generate teams, the command `docker exec -it app php artisan migrate:fresh --seed` is required to be run to clear and re-seed the database.
+
 ## Noteworthy Design Choices
 - The application makes (relatively) heavy use of laravel's singleton binding to pair Interface classes with the desired class that implements them. Where referenced, these classes reference the Interface instead of the intended class directly so as to minimize the footprint
 should a different implementation of the class be desired further down the road. 
@@ -22,3 +25,4 @@ should a different implementation of the class be desired further down the road.
 - The implementation of the Repository pattern is not as cleanly decoupled as I would prefer -- there are still a handful of instances in the service classes that directly access a model class outside of a repository instead of using the repository as an access layer. I consider this light tech debt I would hope to resolve later.
   - A bonus outcome of a cleaner Repository pattern implementation would be the ability to cache database query results in a clean way that would easily allow for cachebusting when necessary (routing everything through the Repository classes as an access layer would simplify the insertion of `Cache::delete()` calls)
 - The application currently relies pretty heavily on manipulation of models in Collections, and it gets a little unwieldly in places. A custom Collection class for Teams especially would allow cleaner code and more efficient logic in retrieving required data.
+- The UI is very barebones. Laravel has made some fairly significant changes to blade syntax since the last time I was using Laravel's frontend tools and that was a bit of a curveball for me. Would ideally like to clean up the UI a bit and add a bit more panache.

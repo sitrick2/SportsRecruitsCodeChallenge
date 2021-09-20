@@ -7,7 +7,6 @@ namespace App\Services\TeamBalancer;
 use App\Models\Team;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\LazyCollection;
 
 class TeamBalancerService implements TeamBalancerServiceInterface
 {
