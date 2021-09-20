@@ -13,3 +13,4 @@ project/npm-debug.log
 project/yarn-error.log
 /.idea
 /.vscode
+/.phpunit.result.cache
