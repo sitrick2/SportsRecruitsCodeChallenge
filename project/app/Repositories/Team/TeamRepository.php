@@ -28,10 +28,6 @@ class TeamRepository implements TeamRepositoryInterface
         return $team;
     }
 
-    /**
-     *  Explanatory note: Not adding players during this process as if we're creating a batch of teams we'll likely want to skip straight to the talent rebalancing logic
-     *  and it's just wasted time saving player relationships to the DB now.
-     */
     public function createMultiple(int $numToCreate, ?array $teamNames = null, ?Collection $coaches = null): Collection
     {
         $teams = new Collection();

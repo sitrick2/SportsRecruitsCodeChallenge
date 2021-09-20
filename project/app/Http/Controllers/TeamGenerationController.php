@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\TeamResource;
 use App\Models\Team;
 use App\Repositories\Team\TeamRepositoryInterface as TeamRepository;
 use App\Services\TeamGeneration\TeamGenerationServiceInterface as TeamGenerationService;
@@ -21,9 +22,10 @@ class TeamGenerationController extends Controller
     public function create(Request $request)
     {
         if ($this->teamRepository->haveTeamsBeenGenerated()) {
-            return Team::with(['coach', 'players'])->get();
+            return TeamResource::collection(Team::with(['coach', 'players'])->get());
         }
 
         $teams = $this->teamGenerationService->generateTeams($request->get('avgTeamSize'), $request->get('teamNames'));
+        return TeamResource::collection($teams);
     }
 }

@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\TeamGeneration\TeamGenerationServiceInterface as TeamGenerationService;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Collection;
+use Symfony\Component\HttpFoundation\Exception\BadRequestException;
 use Tests\TestCase;
 
 class TeamGenerationServiceTest extends TestCase
@@ -30,7 +31,7 @@ class TeamGenerationServiceTest extends TestCase
     {
         $this->loadTestData();
         $teams = $this->teamGenerationService->generateTeams(20);
-        $this->assertTeamsAreConstructedCorrectly($teams);
+        $this->assertTeamsAreConstructedCorrectly($teams, 20);
     }
 
     /**
@@ -38,11 +39,25 @@ class TeamGenerationServiceTest extends TestCase
      * @throws \PHPUnit\Framework\Exception
      * @throws \PHPUnit\Framework\ExpectationFailedException
      */
-    public function testGenerateTeamsWithInexactPlayerCounts(): void
+    public function testGenerateTeamsWithOverflowPlayerCounts(): void
     {
-        $this->loadTestData(['num_of_players' => 59]);
+        $this->loadTestData(['num_of_players' => 81]);
         $teams = $this->teamGenerationService->generateTeams(20);
-        $this->assertTeamsAreConstructedCorrectly($teams);
+        $this->assertTeamsAreConstructedCorrectly($teams, 20);
+    }
+
+    public function testGenerateTeamsWithUnderfilledPlayerCounts(): void
+    {
+        $this->loadTestData(['num_of_players' => 68]);
+        $teams = $this->teamGenerationService->generateTeams(20);
+        $this->assertTeamsAreConstructedCorrectly($teams, 20);
+    }
+
+    public function testThrowsExceptionIfCannotFillRoster(): void
+    {
+        $this->loadTestData(['num_of_players' => 56]);
+        $this->expectException(BadRequestException::class);
+        $teams = $this->teamGenerationService->generateTeams(20);
     }
 
     /**
@@ -50,15 +65,21 @@ class TeamGenerationServiceTest extends TestCase
      * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws \PHPUnit\Framework\Exception
      */
-    private function assertTeamsAreConstructedCorrectly(Collection $teams): void
+    private function assertTeamsAreConstructedCorrectly(Collection $teams, int $avgTeamSize): void
     {
-        $this->assertCount(3, $teams);
+        $this->assertEquals(0, $teams->count() % 2); //test created even number of teams
         foreach ($teams as $team) {
             $this->assertTeamHasOneCoachAndOneGoalie($team);
-            $this->assertTeamHasCorrectNumberOfPlayers($team);
+            $this->assertTeamHasCorrectNumberOfPlayers($team, $avgTeamSize);
         }
-
+        $this->assertAllEligiblePlayersUsed();
         $this->assertTeamsAreEvenlyBalanced($teams);
+    }
+
+    private function assertAllEligiblePlayersUsed(): void
+    {
+        $unusedPlayerCount = User::players()->unassigned()->count();
+        $this->assertEquals(0, $unusedPlayerCount);
     }
 
     /**
@@ -79,10 +100,10 @@ class TeamGenerationServiceTest extends TestCase
      * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws \PHPUnit\Framework\ExpectationFailedException
      */
-    private function assertTeamHasCorrectNumberOfPlayers(Team $team): void
+    private function assertTeamHasCorrectNumberOfPlayers(Team $team, int $avgTeamSize): void
     {
-        $this->assertGreaterThan(17, $team->players->count());
-        $this->assertLessThan(23, $team->players->count());
+        $this->assertGreaterThanOrEqual($avgTeamSize * 0.90, $team->players->count());
+        $this->assertLessThanOrEqual($avgTeamSize * 1.10, $team->players->count());
     }
 
     /**
@@ -108,8 +129,8 @@ class TeamGenerationServiceTest extends TestCase
 
     protected function loadTestData(?array $replacementVars = []): void
     {
-        User::factory()->coach()->count($replacementVars['num_of_teams'] ?? 3)->create();
-        User::factory()->goalie()->count($replacementVars['num_of_teams'] ?? 3)->create();
-        User::factory()->player()->count($replacementVars['num_of_players'] ?? 57)->create();
+        User::factory()->coach()->count($replacementVars['num_of_teams'] ?? 4)->create();
+        User::factory()->goalie()->count($replacementVars['num_of_teams'] ?? 4)->create();
+        User::factory()->player()->count($replacementVars['num_of_players'] ?? 76)->create();
     }
 }

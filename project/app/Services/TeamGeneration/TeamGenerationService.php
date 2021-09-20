@@ -8,6 +8,7 @@ use App\Repositories\Team\TeamRepositoryInterface as TeamRepository;
 use App\Repositories\User\UserRepositoryInterface as UserRepository;
 use App\Services\TeamBalancer\TeamBalancerServiceInterface as TeamBalancerService;
 use Illuminate\Support\Collection;
+use Symfony\Component\HttpFoundation\Exception\BadRequestException;
 
 class TeamGenerationService implements TeamGenerationServiceInterface
 {
@@ -30,7 +31,8 @@ class TeamGenerationService implements TeamGenerationServiceInterface
         $teams = $this->teamRepository->createMultiple($numberOfTeams, $teamNames);
         $teams = $this->assignCoachesToTeams($teams);
         $teams = $this->assignGoaliesToTeams($teams);
-        $teams = $this->distributePlayersAcrossTeams($teams, $avgTeamSize);
+        $teams = $this->distributePlayersEvenlyAcrossTeams($teams, $avgTeamSize);
+        $teams = $this->handleOverflowPlayers($teams, $avgTeamSize);
 
         return $this->teamBalancerService->balanceTeams($teams);
     }
@@ -38,7 +40,27 @@ class TeamGenerationService implements TeamGenerationServiceInterface
     private function determineNumberOfTeams(int $avgTeamSize): int
     {
         $playerCount = $this->userRepository->getTotalPlayerCount();
-        return $playerCount / $avgTeamSize;
+        $numberOfTeams = floor($playerCount / $avgTeamSize);
+
+        if ($numberOfTeams % 2 === 0) {// if even number of teams, all set
+            return $numberOfTeams;
+        }
+
+        $maxOpenExtraSlotsPerTeam = ($avgTeamSize * 1.10) - $avgTeamSize; //we have $maxOpenExtraSlotsPerTeam to fill with overflow players
+        $smallerTeamCount = $numberOfTeams - 1;
+        $overflowCount = $playerCount % ($avgTeamSize * $smallerTeamCount); //checking how many overflow players from avg team size we have if we reduce the team count by 1
+        if ($overflowCount <= ($maxOpenExtraSlotsPerTeam * $smallerTeamCount)) {
+            return $smallerTeamCount;
+        }
+
+        // too many overflow players to use with open slots if we reduce the number of teams by 1. Now test to see if we can fill out the rosters if we add a team.
+        $largerTeamCount = $numberOfTeams + 1;
+        $minimumAcceptableTeamSize = ($avgTeamSize * 0.90); //minimum acceptable team size is 10% less than declared average team size
+        if ($playerCount / $largerTeamCount >= $minimumAcceptableTeamSize) { //check if we can fill out the rosters enough to meet minimum requirements
+            return $largerTeamCount;
+        }
+
+        throw new BadRequestException('Cannot create an even number of teams with the provided values. Please adjust the average team size or the number of players available in the pool.');
     }
 
     private function assignCoachesToTeams(Collection $teams): Collection
@@ -63,16 +85,41 @@ class TeamGenerationService implements TeamGenerationServiceInterface
         return $teams;
     }
 
-    private function distributePlayersAcrossTeams(Collection $teams, int $avgTeamSize): Collection
+    private function distributePlayersEvenlyAcrossTeams(Collection $teams, int $avgTeamSize): Collection
     {
         $players = $this->userRepository->getUnassignedPlayers();
 
         //first assignment pass, random distribution
         foreach ($teams as $team) {
+            $teamSizeMinusGoalie = $avgTeamSize - 1; // -1 to account for goalie already assigned
             /* @var Team $team */
-            $team->players()->saveMany($players->random($avgTeamSize - 1)); // -1 to account for goalie already assigned
+            if ($players->count() >= $teamSizeMinusGoalie){
+                $team->players()->saveMany($players->random($teamSizeMinusGoalie));
+            } else {
+                $team->players()->saveMany($players->all());
+            }
         }
 
+        return $teams;
+    }
+
+    public function handleOverflowPlayers(Collection $teams, int $avgTeamSize): Collection
+    {
+        $teams = $this->teamBalancerService->sortTeamCollectionByTotalPlayerRanking($teams);
+        $remainingPlayers = $this->userRepository->getUnassignedPlayers();
+        while ($remainingPlayers->count() > 0) {
+            foreach ($teams as $team) {
+                if ($remainingPlayers->count() === 0) {
+                    break;
+                }
+
+                /* @var Team $team */
+                if ($team->players->count() <= ($avgTeamSize * 1.10)) {
+                    $team->players()->save($remainingPlayers->get(0));
+                    $team->refresh();
+                }
+            }
+        }
         return $teams;
     }
 }

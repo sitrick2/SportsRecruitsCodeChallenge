@@ -6,23 +6,75 @@ namespace App\Services\TeamBalancer;
 
 use App\Models\Team;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\LazyCollection;
 
 class TeamBalancerService implements TeamBalancerServiceInterface
 {
     public function balanceTeams(Collection $teams): Collection
     {
+        while (!$this->rostersAreSizedCorrectly($teams)) {
+            $teams = $this->rebalancePlayersForRosterSize($teams);
+        }
+
         $teams = $this->sortTeamCollectionByTotalPlayerRanking($teams);
 
         while (!$this->teamsAreBalanced($teams)) {
-            $teams = $this->adjustRosters($teams);
-            $this->sortTeamCollectionByTotalPlayerRanking($teams);
+            $teams = $this->rebalancePlayersForRanking($teams);
+            $teams = $this->sortTeamCollectionByTotalPlayerRanking($teams);
         }
-
-        return $teams;
+        return $teams->sortBy('id');
     }
 
-    private function adjustRosters(Collection $teams): Collection
+    public function sortTeamCollectionByTotalPlayerRanking(Collection $teams): Collection
+    {
+        return $teams->sortBy(function (Team $team) {
+            return $team->totalPlayerRanking();
+        });
+    }
+
+    public function sortTeamCollectionByRosterSize(Collection $teams): Collection
+    {
+        return $teams->sortBy(function (Team $team) {
+            return $team->playerCount();
+        });
+    }
+
+    private function rostersAreSizedCorrectly(Collection $teams): bool
+    {
+        if (Cache::get('rosters_sized_correctly')) {
+            return true;
+        }
+
+        $avgRosterSize = config('teams.default_avg_team_size');
+        foreach ($teams as $team) {
+            if ($team->playerCount() < ($avgRosterSize * 0.90)) {
+                return false;
+            }
+        }
+
+        Cache::put('rosters_sized_correctly', true, 30);
+        return true;
+    }
+
+    private function rebalancePlayersForRosterSize(Collection $teams): Collection
+    {
+        while (!$this->rostersAreSizedCorrectly($teams)) {
+            $teams = $this->sortTeamCollectionByRosterSize($teams);
+
+            $receivingTeam = $teams->first();
+            $givingTeam = $teams->last();
+
+            $receivingTeam->players()->save($givingTeam->players->where('can_play_goalie', false)->first());
+
+            $receivingTeam->refresh();
+            $givingTeam->refresh();
+        }
+
+        return $this->sortTeamCollectionByTotalPlayerRanking($teams);
+    }
+
+    private function rebalancePlayersForRanking(Collection $teams): Collection
     {
         $topPlayer = $teams->last()->players
             ->sortByDesc('ranking')
@@ -38,13 +90,6 @@ class TeamBalancerService implements TeamBalancerServiceInterface
         $teams->last()->players()->save($bottomPlayer);
 
         return $teams;
-    }
-
-    private function sortTeamCollectionByTotalPlayerRanking(Collection $teams): Collection
-    {
-        return $teams->sortBy(function (Team $team) {
-            return $team->totalPlayerRanking();
-        });
     }
 
     /**
